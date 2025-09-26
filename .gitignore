@@ -1,0 +1,44 @@
+# ---- Terraform ----
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform/
+.terraform.lock.hcl
+
+# ---- Sensitive files ----
+*.pem
+*.key
+*.crt
+*.p12
+*.json
+*.yaml
+*.yml
+*.kubeconfig
+*.env
+secrets.tfvars
+terraform.tfvars
+
+# ---- OS & Editor junk ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+*.tmp
+
+# ---- Logs ----
+*.log
+*.out
+*.err
+
+# ---- Python virtualenvs (if used for tooling) ----
+.venv/
+env/
+venv/

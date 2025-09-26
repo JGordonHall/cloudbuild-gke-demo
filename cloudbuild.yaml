@@ -1,0 +1,29 @@
+steps:
+# Step 1: Use the official Terraform image to run `init`
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['init']
+  env:
+    - 'CLOUDSDK_CORE_PROJECT=[PROJECT_ID]'
+
+# Step 2: Run `terraform plan`
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['plan']
+  env:
+    - 'TF_VAR_gke_project_id=[PROJECT_ID]'
+    - 'CLOUDSDK_CORE_PROJECT=[PROJECT_ID]'
+
+# Step 3: Run `terraform apply` if the plan is successful
+# The entrypoint is overridden to 'sh' to allow for multiple commands
+- name: 'hashicorp/terraform:1.6.5'
+  entrypoint: 'sh'
+  args:
+    - '-c'
+    - |
+      terraform apply -auto-approve
+      # Use `gcloud` to get the kubeconfig for the GKE cluster
+      gcloud container clusters get-credentials [GKE_CLUSTER_NAME] --region [GKE_CLUSTER_REGION] --project [PROJECT_ID]
+      # Verify access to the cluster with `kubectl`
+      kubectl get nodes
+  env:
+    - 'TF_VAR_gke_project_id=[PROJECT_ID]'
+    - 'CLOUDSDK_CORE_PROJECT=[PROJECT_ID]'
