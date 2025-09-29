@@ -18,7 +18,6 @@ steps:
         --quiet || echo "No leftover cluster found"
 
 # Step 0.5: Destroy any leftover Terraform-managed resources
-# This ensures you always start from a clean slate
 - name: 'hashicorp/terraform:1.6.5'
   args: ['destroy', '-auto-approve', '-lock=false']
   env:
@@ -39,18 +38,24 @@ steps:
     - 'TF_VAR_gke_project_id=cb-pipeline-demo'
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3: Get kubeconfig
+# Step 3: Get kubeconfig (persist into /workspace/.kube)
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
+  env:
+    - 'KUBECONFIG=/workspace/.kube/config'
   args:
     - '-c'
     - |
+      mkdir -p /workspace/.kube
       gcloud container clusters get-credentials primary \
         --region us-central1 \
-        --project cb-pipeline-demo
+        --project cb-pipeline-demo \
+        --internal-ip
 
-# Step 4: Verify with kubectl
+# Step 4: Verify with kubectl (using persisted kubeconfig)
 - name: 'gcr.io/cloud-builders/kubectl'
+  env:
+    - 'KUBECONFIG=/workspace/.kube/config'
   args: ['get', 'nodes']
 
 options:
