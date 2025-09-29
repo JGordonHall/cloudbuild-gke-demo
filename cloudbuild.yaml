@@ -41,8 +41,6 @@ steps:
 # Step 3: Get kubeconfig (persist into /workspace/.kube)
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
-  env:
-    - 'KUBECONFIG=/workspace/.kube/config'
   args:
     - '-c'
     - |
@@ -54,9 +52,9 @@ steps:
 
 # Step 4: Verify with kubectl (using persisted kubeconfig)
 - name: 'gcr.io/cloud-builders/kubectl'
-  env:
-    - 'KUBECONFIG=/workspace/.kube/config'
   args: ['get', 'nodes']
 
 options:
+  env:
+    - 'KUBECONFIG=/workspace/.kube/config'
   logging: CLOUD_LOGGING_ONLY
