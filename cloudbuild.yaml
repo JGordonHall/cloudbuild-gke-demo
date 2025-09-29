@@ -5,7 +5,19 @@ steps:
   env:
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 0.5: Destroy any leftover resources
+# Step 0.4: Force delete leftover GKE cluster (if it exists)
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      echo "Force deleting leftover GKE cluster if it exists..."
+      gcloud container clusters delete primary \
+        --region us-central1 \
+        --project cb-pipeline-demo \
+        --quiet || echo "No leftover cluster found"
+
+# Step 0.5: Destroy any leftover Terraform-managed resources
 # This ensures you always start from a clean slate
 - name: 'hashicorp/terraform:1.6.5'
   args: ['destroy', '-auto-approve', '-lock=false']
