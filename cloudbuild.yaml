@@ -1,25 +1,33 @@
 steps:
-# Step 1: Use the official Terraform image to run `init`
+# Step 0: Terraform init
 - name: 'hashicorp/terraform:1.6.5'
   args: ['init']
   env:
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 2: Run `terraform plan`
+# Step 0.5: Destroy any leftover resources
+# This ensures you always start from a clean slate
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['destroy', '-auto-approve', '-lock=false']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+
+# Step 1: Terraform plan
 - name: 'hashicorp/terraform:1.6.5'
   args: ['plan']
   env:
     - 'TF_VAR_gke_project_id=cb-pipeline-demo'
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3a: Apply Terraform configuration
+# Step 2: Terraform apply
 - name: 'hashicorp/terraform:1.6.5'
   args: ['apply', '-auto-approve']
   env:
     - 'TF_VAR_gke_project_id=cb-pipeline-demo'
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3b: Fetch kubeconfig using gcloud
+# Step 3: Get kubeconfig
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
   entrypoint: 'bash'
   args:
@@ -29,7 +37,7 @@ steps:
         --region us-central1 \
         --project cb-pipeline-demo
 
-# Step 3c: Verify access to the cluster with kubectl
+# Step 4: Verify with kubectl
 - name: 'gcr.io/cloud-builders/kubectl'
   args: ['get', 'nodes']
 
