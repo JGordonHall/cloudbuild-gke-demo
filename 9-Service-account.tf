@@ -1,16 +1,14 @@
 # https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/google_service_account
+# GCP Service Account for node pool
 resource "google_service_account" "service-a" {
   account_id = "service-a"
+  display_name = "Service Account for GKE Nodes"
 
   lifecycle {
     create_before_destroy = true
   }
 }
-# GCP Service Account for node pool
-resource "google_service_account" "service_a" {
-  account_id   = "service-a"
-  display_name = "Service Account for GKE Nodes"
-}
+
 
 # IAM roles required by GKE nodes
 resource "google_project_iam_member" "service_a_logging" {
