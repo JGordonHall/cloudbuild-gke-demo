@@ -3,30 +3,35 @@ steps:
 - name: 'hashicorp/terraform:1.6.5'
   args: ['init']
   env:
-    - 'CLOUDSDK_CORE_PROJECT=[cb-pipeline-demo]'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
 # Step 2: Run `terraform plan`
 - name: 'hashicorp/terraform:1.6.5'
   args: ['plan']
   env:
-    - 'TF_VAR_gke_project_id=[cb-pipeline-demo]'
-    - 'CLOUDSDK_CORE_PROJECT=[cb-pipeline-demo]'
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3: Run `terraform apply` if the plan is successful
-# The entrypoint is overridden to 'sh' to allow for multiple commands
+# Step 3a: Apply Terraform configuration
 - name: 'hashicorp/terraform:1.6.5'
-  entrypoint: 'sh'
+  args: ['apply', '-auto-approve']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+
+# Step 3b: Fetch kubeconfig using gcloud
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
   args:
     - '-c'
     - |
-      terraform apply -auto-approve
-      # Use `gcloud` to get the kubeconfig for the GKE cluster
-      gcloud container clusters get-credentials [primary] --region [us-central1] --project [cb-pipeline-demo
-      # Verify access to the cluster with `kubectl`
-      kubectl get nodes
-  env:
-    - 'TF_VAR_gke_project_id=[cb-pipeline-demo]'
-    - 'CLOUDSDK_CORE_PROJECT=[cb-pipeline-demo]'
+      gcloud container clusters get-credentials primary \
+        --region us-central1 \
+        --project cb-pipeline-demo
+
+# Step 3c: Verify access to the cluster with kubectl
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['get', 'nodes']
 
 options:
   logging: CLOUD_LOGGING_ONLY
