@@ -24,11 +24,11 @@ steps:
   - name: 'hashicorp/terraform:1.6.5'
     args: ['apply', '-auto-approve']
 
-  # Step 5: Snyk Scan (uses secret)
+  # Step 5: Snyk Scan
   - name: 'snyk/snyk:docker'
-    secretEnv: ['SNYK_TOKEN']   # 👈 Only declare here
+    secretEnv: ['SNYK_TOKEN']
+    entrypoint: bash
     args:
-      - bash
       - -c
       - |
         echo "Authenticating with Snyk..."
