@@ -38,8 +38,9 @@ steps:
     - 'TF_VAR_gke_project_id=cb-pipeline-demo'
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3: Authenticate cluster (no kubeconfig, just env vars)
+# Step 3: Authenticate cluster (using gcloud)
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'gcloud'
   args:
     - 'container'
     - 'clusters'
@@ -53,9 +54,6 @@ steps:
 # Step 4: Verify with kubectl
 - name: 'gcr.io/cloud-builders/kubectl'
   args: ['get', 'nodes']
-  env:
-    - 'CLOUDSDK_COMPUTE_REGION=us-central1'
-    - 'CLOUDSDK_CONTAINER_CLUSTER=primary'
 
 options:
   logging: CLOUD_LOGGING_ONLY
