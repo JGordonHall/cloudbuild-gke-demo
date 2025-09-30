@@ -39,7 +39,7 @@ steps:
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
 # Step 3: Snyk IaC scan
-- name: 'snyk/snyk-cli'
+- name: 'snyk/snyk:docker'
   entrypoint: 'bash'
   args:
     - -c
