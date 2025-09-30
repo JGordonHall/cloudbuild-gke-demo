@@ -22,7 +22,7 @@ steps:
   - name: 'hashicorp/terraform:1.6.5'
     args: ['apply', '-auto-approve']
 
-  # ✅ Snyk step simplified
+  # ✅ Snyk scan
   - name: 'snyk/snyk:docker'
     args: ['iac', 'test', '--severity-threshold=high']
     secretEnv: ['SNYK_TOKEN']
@@ -31,3 +31,6 @@ availableSecrets:
   secretManager:
     - versionName: projects/cb-pipeline-demo/secrets/SNYK_TOKEN/versions/latest
       env: 'SNYK_TOKEN'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
