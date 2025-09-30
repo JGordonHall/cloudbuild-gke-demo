@@ -38,21 +38,23 @@ steps:
     - 'TF_VAR_gke_project_id=cb-pipeline-demo'
     - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3: Authenticate cluster (using gcloud)
+# Step 3: Get kubeconfig (persist into /workspace/.kube)
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: 'gcloud'
+  entrypoint: 'bash'
+  env:
+    - 'KUBECONFIG=/workspace/.kube/config'
   args:
-    - 'container'
-    - 'clusters'
-    - 'get-credentials'
-    - 'primary'
-    - '--region'
-    - 'us-central1'
-    - '--project'
-    - 'cb-pipeline-demo'
+    - '-c'
+    - |
+      mkdir -p /workspace/.kube
+      gcloud container clusters get-credentials primary \
+        --region us-central1 \
+        --project cb-pipeline-demo
 
-# Step 4: Verify with kubectl
+# Step 4: Verify with kubectl (using persisted kubeconfig)
 - name: 'gcr.io/cloud-builders/kubectl'
+  env:
+    - 'KUBECONFIG=/workspace/.kube/config'
   args: ['get', 'nodes']
 
 options:
