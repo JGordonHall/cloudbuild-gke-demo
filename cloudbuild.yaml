@@ -2,60 +2,28 @@ steps:
 # Step 0: Terraform init
 - name: 'hashicorp/terraform:1.6.5'
   args: ['init']
-  env:
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
-
-# Step 0.4: Force delete leftover GKE cluster (if it exists)
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-  entrypoint: 'bash'
-  args:
-    - -c
-    - |
-      echo "Force deleting leftover GKE cluster if it exists..."
-      gcloud container clusters delete primary \
-        --region us-central1 \
-        --project cb-pipeline-demo \
-        --quiet || echo "No leftover cluster found"
-
-# Step 0.5: Destroy any leftover Terraform-managed resources
-- name: 'hashicorp/terraform:1.6.5'
-  args: ['destroy', '-auto-approve', '-lock=false']
-  env:
-    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
 # Step 1: Terraform plan
 - name: 'hashicorp/terraform:1.6.5'
   args: ['plan']
-  env:
-    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
 # Step 2: Terraform apply
 - name: 'hashicorp/terraform:1.6.5'
   args: ['apply', '-auto-approve']
-  env:
-    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3: Get kubeconfig (persist into /workspace/.kube)
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: 'bash'
-  env:
-    - 'KUBECONFIG=/workspace/.kube/config'
+# Step 3: Extract kubeconfig from Terraform output
+- name: 'hashicorp/terraform:1.6.5'
+  entrypoint: 'sh'
   args:
-    - '-c'
+    - -c
     - |
-      mkdir -p /workspace/.kube
-      gcloud container clusters get-credentials primary \
-        --region us-central1 \
-        --project cb-pipeline-demo
+      terraform output -raw kubeconfig > /workspace/kubeconfig
 
-# Step 4: Verify with kubectl (using persisted kubeconfig)
+# Step 4: Verify with kubectl (using generated kubeconfig)
 - name: 'gcr.io/cloud-builders/kubectl'
-  env:
-    - 'KUBECONFIG=/workspace/.kube/config'
   args: ['get', 'nodes']
+  env:
+    - 'KUBECONFIG=/workspace/kubeconfig'
 
 options:
   logging: CLOUD_LOGGING_ONLY
