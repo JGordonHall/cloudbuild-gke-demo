@@ -1,57 +1,33 @@
 steps:
-# Step 0: Terraform init
-- name: 'hashicorp/terraform:1.6.5'
-  args: ['init']
-  env:
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+  - name: 'hashicorp/terraform:1.6.5'
+    args: ['init']
 
-# Step 0.4: Force delete leftover GKE cluster (if it exists)
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-  entrypoint: 'bash'
-  args:
-    - -c
-    - |
-      echo "Force deleting leftover GKE cluster if it exists..."
-      gcloud container clusters delete primary \
-        --region us-central1 \
-        --project cb-pipeline-demo \
-        --quiet || echo "No leftover cluster found"
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+    entrypoint: 'sh'
+    args:
+      - '-c'
+      - |
+        echo "Force deleting leftover GKE cluster if it exists..."
+        gcloud container clusters delete primary \
+          --region us-central1 \
+          --project cb-pipeline-demo \
+          --quiet || echo "No leftover cluster found"
 
-# Step 0.5: Destroy any leftover Terraform-managed resources
-- name: 'hashicorp/terraform:1.6.5'
-  args: ['destroy', '-auto-approve', '-lock=false']
-  env:
-    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+  - name: 'hashicorp/terraform:1.6.5'
+    args: ['destroy', '-auto-approve', '-lock=false']
 
-# Step 1: Terraform plan
-- name: 'hashicorp/terraform:1.6.5'
-  args: ['plan']
-  env:
-    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+  - name: 'hashicorp/terraform:1.6.5'
+    args: ['plan']
 
-# Step 2: Terraform apply
-- name: 'hashicorp/terraform:1.6.5'
-  args: ['apply', '-auto-approve']
-  env:
-    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+  - name: 'hashicorp/terraform:1.6.5'
+    args: ['apply', '-auto-approve']
 
-# Step 3: Snyk test (IAC scan against Terraform)
-- name: 'snyk/snyk:docker'
-  entrypoint: 'bash'
-  args:
-    - -c
-    - |
-      echo "Running Snyk IaC scan..."
-      snyk iac test --severity-threshold=high
-  secretEnv: ['SNYK_TOKEN']
-
-options:
-  logging: CLOUD_LOGGING_ONLY
+  # ✅ Snyk step simplified
+  - name: 'snyk/snyk:docker'
+    args: ['iac', 'test', '--severity-threshold=high']
+    secretEnv: ['SNYK_TOKEN']
 
 availableSecrets:
   secretManager:
-    - versionName: projects/cb-pipeline-demo/secrets/snyk-token/versions/latest
-      env: SNYK_TOKEN
+    - versionName: projects/cb-pipeline-demo/secrets/SNYK_TOKEN/versions/latest
+      env: 'SNYK_TOKEN'
