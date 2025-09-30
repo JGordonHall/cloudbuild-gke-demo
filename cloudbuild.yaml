@@ -27,15 +27,16 @@ steps:
   # Step 5: Snyk Scan (auth via Secret Manager)
   - name: 'snyk/snyk:docker'
     entrypoint: 'bash'
+    secretEnv: ['SNYK_TOKEN']   # 👈 tell Cloud Build this step consumes the secret
     args:
       - -c
       - |
         echo "Authenticating with Snyk..."
-        snyk auth "$$SNYK_TOKEN"
+        snyk auth "$SNYK_TOKEN"
         echo "Running Snyk scan..."
         snyk test --docker your-docker-image:latest --file=Dockerfile
 
-# Secret Manager injection
+# Secret Manager injection (global)
 availableSecrets:
   secretManager:
     - versionName: projects/cb-pipeline-demo/secrets/snyk-token/versions/latest
