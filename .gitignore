@@ -42,3 +42,5 @@ Thumbs.db
 .venv/
 env/
 venv/
+PROJECT_ID=cb-pipeline-demo.txt
+gcloud projects add-iam-policy-binding c.dockerfile
