@@ -24,19 +24,18 @@ steps:
   - name: 'hashicorp/terraform:1.6.5'
     args: ['apply', '-auto-approve']
 
-  # Step 5: Snyk Scan (auth via Secret Manager)
+  # Step 5: Snyk Scan (uses secret)
   - name: 'snyk/snyk:docker'
-    entrypoint: 'bash'
-    secretEnv: ['SNYK_TOKEN']   # 👈 tell Cloud Build this step consumes the secret
+    secretEnv: ['SNYK_TOKEN']   # 👈 Only declare here
     args:
+      - bash
       - -c
       - |
         echo "Authenticating with Snyk..."
-        snyk auth "$SNYK_TOKEN"
-        echo "Running Snyk scan..."
+        snyk auth "${SNYK_TOKEN}"
+        echo "Running Snyk Docker scan..."
         snyk test --docker your-docker-image:latest --file=Dockerfile
 
-# Secret Manager injection (global)
 availableSecrets:
   secretManager:
     - versionName: projects/cb-pipeline-demo/secrets/snyk-token/versions/latest
