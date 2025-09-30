@@ -1,5 +1,5 @@
 output "kubeconfig" {
-  value = <<EOT
+  value     = <<EOT
 apiVersion: v1
 kind: Config
 clusters:

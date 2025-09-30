@@ -2,28 +2,35 @@ steps:
 # Step 0: Terraform init
 - name: 'hashicorp/terraform:1.6.5'
   args: ['init']
+  env:
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
 # Step 1: Terraform plan
 - name: 'hashicorp/terraform:1.6.5'
   args: ['plan']
+  env:
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
 # Step 2: Terraform apply
 - name: 'hashicorp/terraform:1.6.5'
   args: ['apply', '-auto-approve']
+  env:
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-# Step 3: Extract kubeconfig from Terraform output
+# Step 3: Export kubeconfig from Terraform output
 - name: 'hashicorp/terraform:1.6.5'
   entrypoint: 'sh'
   args:
     - -c
     - |
-      terraform output -raw kubeconfig > /workspace/kubeconfig
+      mkdir -p /workspace/.kube
+      terraform output -raw kubeconfig > /workspace/.kube/config
 
-# Step 4: Verify with kubectl (using generated kubeconfig)
+# Step 4: Verify with kubectl
 - name: 'gcr.io/cloud-builders/kubectl'
-  args: ['get', 'nodes']
   env:
-    - 'KUBECONFIG=/workspace/kubeconfig'
+    - 'KUBECONFIG=/workspace/.kube/config'
+  args: ['get', 'nodes']
 
 options:
   logging: CLOUD_LOGGING_ONLY
