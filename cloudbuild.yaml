@@ -1,45 +1,57 @@
 steps:
-  # Step 0: Terraform Init
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['init']
+# Step 0: Terraform init
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['init']
+  env:
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # Step 1: Force delete leftover GKE cluster (ignore errors if not found)
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-    entrypoint: 'bash'
-    args:
-      - -c
-      - |
-        echo "Force deleting leftover GKE cluster if it exists..."
-        gcloud container clusters delete primary --region=us-central1 --quiet || echo "No leftover cluster found"
+# Step 0.4: Force delete leftover GKE cluster (if it exists)
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      echo "Force deleting leftover GKE cluster if it exists..."
+      gcloud container clusters delete primary \
+        --region us-central1 \
+        --project cb-pipeline-demo \
+        --quiet || echo "No leftover cluster found"
 
-  # Step 2: Terraform Destroy (cleanup before re-create)
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['destroy', '-auto-approve']
+# Step 0.5: Destroy any leftover Terraform-managed resources
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['destroy', '-auto-approve', '-lock=false']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # Step 3: Terraform Plan
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['plan']
+# Step 1: Terraform plan
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['plan']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # Step 4: Terraform Apply
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['apply', '-auto-approve']
+# Step 2: Terraform apply
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['apply', '-auto-approve']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # Step 5: Snyk Scan
-  - name: 'snyk/snyk:docker'
-    secretEnv: ['SNYK_TOKEN']
-    entrypoint: bash
-    args:
-      - -c
-      - |
-        echo "Authenticating with Snyk..."
-        snyk auth "${SNYK_TOKEN}"
-        echo "Running Snyk Docker scan..."
-        snyk test --docker your-docker-image:latest --file=Dockerfile
+# Step 3: Snyk test (IAC scan against Terraform)
+- name: 'snyk/snyk:docker'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      echo "Running Snyk IaC scan..."
+      snyk iac test --severity-threshold=high
+  secretEnv: ['SNYK_TOKEN']
+
+options:
+  logging: CLOUD_LOGGING_ONLY
 
 availableSecrets:
   secretManager:
     - versionName: projects/cb-pipeline-demo/secrets/snyk-token/versions/latest
-      env: 'SNYK_TOKEN'
-
-options:
-  logging: CLOUD_LOGGING_ONLY
+      env: SNYK_TOKEN
