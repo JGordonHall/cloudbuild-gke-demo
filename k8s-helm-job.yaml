@@ -4,25 +4,36 @@ metadata:
   name: helm-prometheus-grafana
   namespace: monitoring
 spec:
+  backoffLimit: 0
   template:
     spec:
-      serviceAccountName: helm-admin
+      serviceAccountName: default
       restartPolicy: Never
       containers:
       - name: helm
-        image: alpine/helm:3.14.2
+        image: alpine/helm:3.12.0
         command:
-        - sh
-        - -c
-        - |
-          # Add Prometheus community repo
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-          helm repo update
+          - /bin/sh
+          - -c
+          - |
+            echo "Installing kube-prometheus-stack with Grafana credentials from Secret..."
+            helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+            helm repo update
 
-          # Deploy Prometheus + Grafana with credentials from Kubernetes Secret
-          helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
-            --namespace monitoring \
-            --create-namespace \
-            --set grafana.admin.existingSecret=grafana-credentials \
-            --set grafana.admin.userKey=admin-user \
-            --set grafana.admin.passwordKey=admin-password
+            helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+              --namespace monitoring \
+              --create-namespace \
+              --set grafana.admin.existingSecret=grafana-credentials \
+              --set grafana.admin.userKey=admin-user \
+              --set grafana.admin.passwordKey=admin-password \
+              --wait
+        env:
+          - name: KUBECONFIG
+            value: /root/.kube/config
+        volumeMounts:
+          - name: kubeconfig
+            mountPath: /root/.kube
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
