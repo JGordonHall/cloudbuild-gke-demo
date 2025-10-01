@@ -4,6 +4,8 @@ resource "google_container_cluster" "primary" {
   name     = "primary"
   location = "us-central1"
 
+  deletion_protection = false
+
   # Networking
   network    = google_compute_network.main.self_link
   subnetwork = google_compute_subnetwork.private.self_link
