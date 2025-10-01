@@ -1,84 +1,54 @@
 steps:
-  # --- Step 0: Terraform init ---
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['init']
-    env:
-      - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+# Step 0: Terraform init
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['init']
+  env:
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # --- Step 0.4: Force delete leftover GKE cluster (if exists) ---
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-    entrypoint: 'bash'
-    args:
-      - -c
-      - |
-        echo "Force deleting leftover GKE cluster if it exists..."
-        gcloud container clusters delete primary \
-          --region us-central1 \
-          --project cb-pipeline-demo \
-          --quiet || echo "No leftover cluster found"
+# Step 0.4: Force delete leftover GKE cluster (if it exists)
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
+  entrypoint: 'bash'
+  args:
+    - -c
+    - |
+      echo "Force deleting leftover GKE cluster if it exists..."
+      gcloud container clusters delete primary \
+        --region us-central1 \
+        --project cb-pipeline-demo \
+        --quiet || echo "No leftover cluster found"
 
-  # --- Step 0.5: Destroy any leftover Terraform-managed resources ---
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['destroy', '-auto-approve', '-lock=false']
-    env:
-      - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-      - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+# Step 0.5: Destroy any leftover Terraform-managed resources
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['destroy', '-auto-approve', '-lock=false']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # --- Step 1: Terraform plan ---
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['plan']
-    env:
-      - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-      - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+# Step 1: Terraform plan
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['plan']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # --- Step 2: Terraform apply ---
-  - name: 'hashicorp/terraform:1.6.5'
-    args: ['apply', '-auto-approve']
-    env:
-      - 'TF_VAR_gke_project_id=cb-pipeline-demo'
-      - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
+# Step 2: Terraform apply
+- name: 'hashicorp/terraform:1.6.5'
+  args: ['apply', '-auto-approve']
+  env:
+    - 'TF_VAR_gke_project_id=cb-pipeline-demo'
+    - 'CLOUDSDK_CORE_PROJECT=cb-pipeline-demo'
 
-  # --- Step 3: Inject Grafana credentials from Secret Manager into Kubernetes ---
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
-    entrypoint: 'bash'
-    args:
-      - -c
-      - |
-        echo "Fetching Grafana credentials from Secret Manager..."
-        GRAFANA_USER=$(gcloud secrets versions access latest --secret=grafana-admin-user)
-        GRAFANA_PASS=$(gcloud secrets versions access latest --secret=grafana-admin-password)
-
-        echo "Creating Kubernetes Secret in observability namespace..."
-        gcloud container clusters get-credentials primary \
-          --region us-central1 \
-          --project cb-pipeline-demo \
-          --internal-ip
-        kubectl create namespace observability || true
-        kubectl delete secret grafana-credentials -n observability || true
-        kubectl create secret generic grafana-credentials \
-          --from-literal=admin-user=$GRAFANA_USER \
-          --from-literal=admin-password=$GRAFANA_PASS \
-          -n observability
-
-  # --- Step 4: Deploy Prometheus & Grafana via Helm Job ---
-  - name: 'gcr.io/cloud-builders/kubectl'
-    id: 'deploy-helm-job'
-    args:
-      - apply
-      - -f
-      - k8s-helm-job.yaml
-
-  # --- Step 5: Run Snyk IaC Scan ---
-  - name: 'snyk/snyk:docker'
-    entrypoint: 'sh'
-    args:
-      - -c
-      - snyk iac test --severity-threshold=high
-    secretEnv: ['SNYK_TOKEN']
+# Step 3: Snyk IaC scan
+- name: 'snyk/snyk:docker'
+  entrypoint: 'sh'
+  args:
+    - '-c'
+    - snyk iac test --severity-threshold=high
+  secretEnv: ['SNYK_TOKEN']
 
 availableSecrets:
   secretManager:
-    - versionName: projects/$PROJECT_NUMBER/secrets/snyk-token/versions/latest
+    - versionName: projects/cb-pipeline-demo/secrets/snyk-token/versions/latest
       env: 'SNYK_TOKEN'
 
 options:
